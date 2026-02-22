@@ -1,18 +1,33 @@
 using System.Windows;
 using System.Windows.Controls;
+using TradeAI.Infrastructure.MarketData;
+using TradeAI.Infrastructure.Settings;
+using TradeAI.UI.ViewModels;
 
 namespace TradeAI.App;
 
 public partial class MainWindow : Window
 {
-    public MainWindow()
+    private readonly ChartViewModel  _chartVm;
+    private readonly DataFeedManager _feedManager;
+    private readonly AppSettings     _settings;
+
+    public MainWindow(ChartViewModel chartVm, DataFeedManager feedManager, AppSettings settings)
     {
+        _chartVm     = chartVm;
+        _feedManager = feedManager;
+        _settings    = settings;
+
         InitializeComponent();
+
+        // Wire the chart ViewModel into the ChartView UserControl
+        ChartPanel.DataContext = _chartVm;
+
         SizeToWorkArea();
-        SetActiveTimeframe("5m");
+        SetActiveTimeframe(_settings.ActiveTimeframe);
     }
 
-    // Size window to 88% of the current work area so it always fits on screen
+    // ── Window sizing ──────────────────────────────────────────────────────────
     private void SizeToWorkArea()
     {
         var wa = SystemParameters.WorkArea;
@@ -22,7 +37,7 @@ public partial class MainWindow : Window
         Top    = wa.Top  + (wa.Height - Height) / 2;
     }
 
-    // ─── Window chrome ─────────────────────────────────────────
+    // ── Window chrome ──────────────────────────────────────────────────────────
     private void BtnMinimize_Click(object sender, RoutedEventArgs e)
         => WindowState = WindowState.Minimized;
 
@@ -34,11 +49,13 @@ public partial class MainWindow : Window
     private void BtnClose_Click(object sender, RoutedEventArgs e)
         => Close();
 
-    // ─── Timeframe selector ────────────────────────────────────
+    // ── Timeframe selector ────────────────────────────────────────────────────
     private void TfButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string tf)
-            SetActiveTimeframe(tf);
+        if (sender is not Button btn || btn.Tag is not string tf) return;
+        SetActiveTimeframe(tf);
+        _feedManager.SetActiveSymbol(_settings.ActiveSymbol, tf);
+        _ = _chartVm.ChangeTimeframeAsync(tf);
     }
 
     private void SetActiveTimeframe(string tf)
@@ -46,11 +63,9 @@ public partial class MainWindow : Window
         foreach (var child in TfButtonPanel.Children)
         {
             if (child is Button btn)
-            {
                 btn.Style = (btn.Tag as string) == tf
                     ? (Style)FindResource("TimeframeButtonActiveStyle")
                     : (Style)FindResource("TimeframeButtonStyle");
-            }
         }
     }
 }

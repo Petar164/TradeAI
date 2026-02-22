@@ -7,6 +7,8 @@ using TradeAI.Data.Database;
 using TradeAI.Data.Database.Repositories;
 using TradeAI.Infrastructure.MarketData;
 using TradeAI.Infrastructure.Settings;
+using TradeAI.UI.ChartBridge;
+using TradeAI.UI.ViewModels;
 
 namespace TradeAI.App;
 
@@ -66,11 +68,18 @@ public partial class App : Application
         // Register DataFeedManager as singleton AND as a hosted service
         services.AddSingleton<DataFeedManager>();
         services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<DataFeedManager>());
+        // Forward ILiveCandleFeed to the same DataFeedManager singleton
+        services.AddSingleton<ILiveCandleFeed>(sp => sp.GetRequiredService<DataFeedManager>());
+        // Forward IActiveSymbolProvider to AppSettings singleton
+        services.AddSingleton<IActiveSymbolProvider>(sp => sp.GetRequiredService<AppSettings>());
+
+        // ── Chart (Sprint 4)
+        services.AddSingleton<ChartBridgeService>();
+        services.AddSingleton<ChartViewModel>();
 
         // ── UI
         services.AddTransient<MainWindow>();
 
-        // Sprint 4: ChartBridgeService registered here
         // Sprint 5: SignalBus registered here
         // Sprint 6+: Signal detectors, OverlayStateMachine registered here
     }

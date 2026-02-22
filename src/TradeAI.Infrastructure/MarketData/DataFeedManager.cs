@@ -18,7 +18,7 @@ namespace TradeAI.Infrastructure.MarketData;
 ///
 /// Events are plain C# EventHandler until Sprint 5 replaces them with SignalBus.
 /// </summary>
-public sealed class DataFeedManager : IHostedService, IDisposable
+public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposable
 {
     // ── Events (replaced by SignalBus in Sprint 5) ────────────────────────────
     public event EventHandler<CandleEventArgs>? IntraCandleUpdated;

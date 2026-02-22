@@ -6,7 +6,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm"                    Version="8.4.0" />
+    <PackageReference Include="Microsoft.Web.WebView2"                   Version="1.0.3800.47" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+  </ItemGroup>
+
+  <!-- chart-host.html embedded so ChartBridgeService can load it via GetManifestResourceStream -->
+  <ItemGroup>
+    <EmbeddedResource Include="ChartBridge\chart-host.html" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,8 +1,9 @@
 using System.IO;
+using TradeAI.Core.Interfaces;
 
 namespace TradeAI.Infrastructure.Settings;
 
-public class AppSettings
+public class AppSettings : IActiveSymbolProvider
 {
     // Database
     public string DatabasePath { get; set; } =
