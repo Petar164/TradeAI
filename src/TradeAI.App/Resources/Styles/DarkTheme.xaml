@@ -1,0 +1,270 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- COLOUR PALETTE                                             -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Color x:Key="ColorBackground">#0B0E17</Color>
+    <Color x:Key="ColorSurface">#111520</Color>
+    <Color x:Key="ColorSurface2">#161B28</Color>
+    <Color x:Key="ColorSurfaceElevated">#1C2235</Color>
+    <Color x:Key="ColorBorder">#232838</Color>
+    <Color x:Key="ColorBorderSubtle">#1A1E2C</Color>
+    <Color x:Key="ColorInputBackground">#0D1019</Color>
+
+    <Color x:Key="ColorTextPrimary">#D1D4DC</Color>
+    <Color x:Key="ColorTextMuted">#6B7280</Color>
+    <Color x:Key="ColorTextSubtle">#374151</Color>
+
+    <Color x:Key="ColorAccent">#2962FF</Color>
+    <Color x:Key="ColorAccentHover">#4472FF</Color>
+    <Color x:Key="ColorAccentDim">#1A3680</Color>
+
+    <Color x:Key="ColorSuccess">#26A69A</Color>
+    <Color x:Key="ColorSuccessDim">#0D3330</Color>
+    <Color x:Key="ColorDanger">#EF5350</Color>
+    <Color x:Key="ColorDangerDim">#3D1615</Color>
+    <Color x:Key="ColorWarning">#FF9800</Color>
+    <Color x:Key="ColorInfo">#7B61FF</Color>
+
+    <Color x:Key="ColorSignalTrend">#2962FF</Color>
+    <Color x:Key="ColorSignalBreakout">#FF9800</Color>
+    <Color x:Key="ColorSignalMeanReversion">#7B61FF</Color>
+    <Color x:Key="ColorSignalBounce">#FFD600</Color>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- BRUSHES                                                    -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <SolidColorBrush x:Key="BrushBackground"        Color="{StaticResource ColorBackground}" />
+    <SolidColorBrush x:Key="BrushSurface"           Color="{StaticResource ColorSurface}" />
+    <SolidColorBrush x:Key="BrushSurface2"          Color="{StaticResource ColorSurface2}" />
+    <SolidColorBrush x:Key="BrushSurfaceElevated"   Color="{StaticResource ColorSurfaceElevated}" />
+    <SolidColorBrush x:Key="BrushBorder"            Color="{StaticResource ColorBorder}" />
+    <SolidColorBrush x:Key="BrushBorderSubtle"      Color="{StaticResource ColorBorderSubtle}" />
+    <SolidColorBrush x:Key="BrushInputBackground"   Color="{StaticResource ColorInputBackground}" />
+
+    <SolidColorBrush x:Key="BrushTextPrimary"       Color="{StaticResource ColorTextPrimary}" />
+    <SolidColorBrush x:Key="BrushTextMuted"         Color="{StaticResource ColorTextMuted}" />
+    <SolidColorBrush x:Key="BrushTextSubtle"        Color="{StaticResource ColorTextSubtle}" />
+
+    <SolidColorBrush x:Key="BrushAccent"            Color="{StaticResource ColorAccent}" />
+    <SolidColorBrush x:Key="BrushAccentHover"       Color="{StaticResource ColorAccentHover}" />
+    <SolidColorBrush x:Key="BrushAccentDim"         Color="{StaticResource ColorAccentDim}" />
+
+    <SolidColorBrush x:Key="BrushSuccess"           Color="{StaticResource ColorSuccess}" />
+    <SolidColorBrush x:Key="BrushSuccessDim"        Color="{StaticResource ColorSuccessDim}" />
+    <SolidColorBrush x:Key="BrushDanger"            Color="{StaticResource ColorDanger}" />
+    <SolidColorBrush x:Key="BrushDangerDim"         Color="{StaticResource ColorDangerDim}" />
+    <SolidColorBrush x:Key="BrushWarning"           Color="{StaticResource ColorWarning}" />
+    <SolidColorBrush x:Key="BrushInfo"              Color="{StaticResource ColorInfo}" />
+
+    <SolidColorBrush x:Key="BrushSignalTrend"       Color="{StaticResource ColorSignalTrend}" />
+    <SolidColorBrush x:Key="BrushSignalBreakout"    Color="{StaticResource ColorSignalBreakout}" />
+    <SolidColorBrush x:Key="BrushSignalMeanRev"     Color="{StaticResource ColorSignalMeanReversion}" />
+    <SolidColorBrush x:Key="BrushSignalBounce"      Color="{StaticResource ColorSignalBounce}" />
+
+    <!-- Header accent gradient (top 2px line) -->
+    <LinearGradientBrush x:Key="BrushHeaderAccent" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#2962FF" Offset="0"/>
+        <GradientStop Color="#7B61FF" Offset="0.35"/>
+        <GradientStop Color="#00000000" Offset="0.65"/>
+    </LinearGradientBrush>
+
+    <!-- Chart grid pattern background -->
+    <DrawingBrush x:Key="BrushChartGrid" TileMode="Tile"
+                  Viewport="0,0,48,36" ViewportUnits="Absolute">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#0B0E17">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,48,36"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#15192A" Thickness="0.5"/>
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <LineGeometry StartPoint="48,0" EndPoint="48,36"/>
+                            <LineGeometry StartPoint="0,36" EndPoint="48,36"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- BASE ELEMENT STYLES                                        -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+    </Style>
+
+    <Style TargetType="TextBox">
+        <Setter Property="Background"      Value="{StaticResource BrushInputBackground}" />
+        <Setter Property="Foreground"      Value="{StaticResource BrushTextPrimary}" />
+        <Setter Property="BorderBrush"     Value="{StaticResource BrushBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding"         Value="10,7" />
+        <Setter Property="FontFamily"      Value="Segoe UI" />
+        <Setter Property="FontSize"        Value="12" />
+        <Setter Property="CaretBrush"      Value="{StaticResource BrushTextPrimary}" />
+        <Setter Property="SelectionBrush"  Value="{StaticResource BrushAccent}" />
+        <Style.Triggers>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource BrushAccent}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ScrollViewer">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- WINDOW CHROME BUTTONS                                      -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="ChromeButtonStyle" TargetType="Button">
+        <Setter Property="Background"      Value="Transparent" />
+        <Setter Property="Foreground"      Value="{StaticResource BrushTextMuted}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Width"           Value="46" />
+        <Setter Property="Height"          Value="48" />
+        <Setter Property="FontSize"        Value="13" />
+        <Setter Property="Cursor"          Value="Arrow" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#1E2336"/>
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ChromeCloseButtonStyle" TargetType="Button">
+        <Setter Property="Background"      Value="Transparent" />
+        <Setter Property="Foreground"      Value="{StaticResource BrushTextMuted}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Width"           Value="46" />
+        <Setter Property="Height"          Value="48" />
+        <Setter Property="FontSize"        Value="13" />
+        <Setter Property="Cursor"          Value="Arrow" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#C42B1C"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- TIMEFRAME BUTTONS                                          -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="TimeframeButtonStyle" TargetType="Button">
+        <Setter Property="Background"      Value="Transparent" />
+        <Setter Property="Foreground"      Value="{StaticResource BrushTextMuted}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontSize"        Value="11" />
+        <Setter Property="FontWeight"      Value="SemiBold" />
+        <Setter Property="Padding"         Value="10,5" />
+        <Setter Property="Cursor"          Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BrushSurfaceElevated}"/>
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TimeframeButtonActiveStyle" TargetType="Button" BasedOn="{StaticResource TimeframeButtonStyle}">
+        <Setter Property="Background" Value="{StaticResource BrushAccentDim}" />
+        <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}" />
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- WATCHLIST ROW                                              -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="WatchlistRowStyle" TargetType="Border">
+        <Setter Property="Background"      Value="Transparent"/>
+        <Setter Property="Height"          Value="58"/>
+        <Setter Property="BorderBrush"     Value="{StaticResource BrushBorderSubtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Cursor"          Value="Hand"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource BrushSurfaceElevated}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- PANEL HEADER LABEL                                         -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="PanelHeaderStyle" TargetType="TextBlock">
+        <Setter Property="Foreground"  Value="{StaticResource BrushTextMuted}" />
+        <Setter Property="FontSize"    Value="10" />
+        <Setter Property="FontWeight"  Value="SemiBold" />
+        <Setter Property="Margin"      Value="16,12,16,8" />
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- PRIMARY BUTTON                                             -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+        <Setter Property="Background"      Value="{StaticResource BrushAccent}" />
+        <Setter Property="Foreground"      Value="White" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontSize"        Value="12" />
+        <Setter Property="FontWeight"      Value="SemiBold" />
+        <Setter Property="Padding"         Value="16,8" />
+        <Setter Property="Cursor"          Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BrushAccentHover}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
