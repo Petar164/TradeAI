@@ -1,9 +1,11 @@
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using TradeAI.Core.Interfaces;
 using TradeAI.Core.Models;
 using TradeAI.Data.Database;
 using TradeAI.Data.Database.Repositories;
+using TradeAI.Infrastructure.MarketData;
 using TradeAI.Infrastructure.Settings;
 
 namespace TradeAI.App;
@@ -49,15 +51,25 @@ public partial class App : Application
         });
 
         // ── Repositories
-        services.AddSingleton<ICandleRepository,       CandleRepository>();
-        services.AddSingleton<ISignalRepository,       SignalRepository>();
+        services.AddSingleton<ICandleRepository,        CandleRepository>();
+        services.AddSingleton<ISignalRepository,        SignalRepository>();
         services.AddSingleton<IFeatureVectorRepository, FeatureVectorRepository>();
-        services.AddSingleton<IWatchlistRepository,    WatchlistRepository>();
+        services.AddSingleton<IWatchlistRepository,     WatchlistRepository>();
+        // Forward write/read interfaces to existing singleton instances (no double-instantiation)
+        services.AddSingleton<ICandleWriter>(sp    => (ICandleWriter)sp.GetRequiredService<ICandleRepository>());
+        services.AddSingleton<IWatchlistReader>(sp => (IWatchlistReader)sp.GetRequiredService<IWatchlistRepository>());
+
+        // ── Market data feed
+        services.AddSingleton<CandleCache>();
+        services.AddSingleton<RateLimitScheduler>();
+        services.AddSingleton<IMarketDataProvider, YahooFinanceProvider>();
+        // Register DataFeedManager as singleton AND as a hosted service
+        services.AddSingleton<DataFeedManager>();
+        services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<DataFeedManager>());
 
         // ── UI
         services.AddTransient<MainWindow>();
 
-        // Sprint 3: DataFeedManager, MarketDataProviders registered here
         // Sprint 4: ChartBridgeService registered here
         // Sprint 5: SignalBus registered here
         // Sprint 6+: Signal detectors, OverlayStateMachine registered here

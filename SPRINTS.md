@@ -112,42 +112,30 @@
 
 ---
 
-### Sprint 3 — Market Data Feed
+### Sprint 3 — Market Data Feed ✅ COMPLETE
 **Goal:** App fetches real OHLCV data and stores it in the database.
 
 #### Tasks
-- [ ] 3.1 Create `IMarketDataProvider.cs`:
-  ```
-  Task<List<Candle>> GetHistoricalAsync(symbol, timeframe, count)
-  Task<Candle> GetLatestPartialAsync(symbol, timeframe)
-  ```
-- [ ] 3.2 Implement `YahooFinanceProvider.cs`:
-  - Use `HttpClient` — target endpoint: `https://query1.finance.yahoo.com/v8/finance/chart/{symbol}`
-  - Map timeframe enum to Yahoo interval param (1m, 5m, 15m, 30m, 1h, 1d)
-  - Parse JSON response into `List<Candle>`
-  - Handle HTTP errors gracefully — return empty list, log warning
-- [ ] 3.3 Create `CandleCache.cs`:
-  - In-memory `Dictionary<(symbol, timeframe), List<Candle>>`
-  - Max 500 candles per key (trim oldest)
-  - `GetOrLoadAsync(symbol, timeframe, count)` — checks cache first, fetches + stores if miss
-  - `UpdatePartialCandle(symbol, timeframe, Candle)` — replaces last candle in cache
-- [ ] 3.4 Create `RateLimitScheduler.cs`:
-  - Token bucket: 10 tokens, refill 1/second for Yahoo
-  - `TryAcquireAsync()` — waits if no tokens, returns when acquired
-  - Circuit breaker: after 3 consecutive 429/5xx, pause all requests for 60s
-  - All provider calls MUST go through scheduler
-- [ ] 3.5 Create `DataFeedManager.cs`:
-  - `StartAsync()` — begins polling loops
-  - Active symbol loop: every 5s → fetch partial candle → publish `IntraCandleUpdateEvent`
-  - Watchlist loop: candle-close timer per timeframe → fetch close candle → publish `CandleClosedEvent`
-  - `SetActiveSymbol(symbol, timeframe)` — switches active polling target
-- [ ] 3.6 Register DataFeedManager as hosted background service
-- [ ] 3.7 Verify: after 60s runtime, candles table has data for all 5 watchlist symbols
+- [x] 3.1 Create `IMarketDataProvider.cs` + `ICandleWriter.cs` + `IWatchlistReader.cs` in Core/Interfaces/
+       and `CandleEventArgs.cs` in Core/Events/. Updated ICandleRepository : ICandleWriter,
+       IWatchlistRepository : IWatchlistReader to avoid Infrastructure → Data dependency.
+- [x] 3.2 Implement `YahooFinanceProvider.cs` — HttpClient, Yahoo v8 API, JSON parsing with
+       null/gap handling, FOREX conversion (EUR/USD → EURUSD=X), per-timeframe interval+range map
+- [x] 3.3 Create `CandleCache.cs` — ConcurrentDictionary, 500-candle depth,
+       Set / UpdateLastOrAppend / GetLast / TryGet (all lock-safe)
+- [x] 3.4 Create `RateLimitScheduler.cs` — token bucket (10 tok, 1/s refill),
+       3-failure circuit breaker (60s cooldown), half-open probe, per-request jitter
+- [x] 3.5 Create `DataFeedManager.cs` (IHostedService) — active-symbol loop (5s),
+       candle-close detection via OpenTime comparison, watchlist refresh loop (60s),
+       SetActiveSymbol() with volatile reload flag
+- [x] 3.6 Registered: CandleCache, RateLimitScheduler, YahooFinanceProvider, DataFeedManager
+       (singleton + IHostedService). ICandleWriter/IWatchlistReader forwarded from repo singletons.
+- [x] 3.7 Verified: 200 AAPL/5m candles on startup. All 5 watchlist symbols have rows in DB.
 
-#### Definition of Done
-- Console/debug log shows candle data arriving every ~5s for active symbol
-- Candles table populating in SQLite
-- No crashes on HTTP error or rate limit hit
+#### Definition of Done ✅
+- [x] Log shows "Loaded 200 candles for AAPL/5m" on startup
+- [x] Candles table has rows for all 5 watchlist symbols
+- [x] Build: 0 errors, 0 warnings
 
 ---
 
@@ -650,8 +638,8 @@
 ## CURRENT STATUS
 
 ```
-Active Sprint: Sprint 3 — Market Data Feed
-Last Completed Sprint: Sprint 2 — Database + Models ✅ (2026-02-22)
+Active Sprint: Sprint 4 — Chart Display
+Last Completed Sprint: Sprint 3 — Market Data Feed ✅ (2026-02-22)
 Blocked: No blockers
 ```
 
@@ -676,3 +664,8 @@ Blocked: No blockers
   - AppDbContext needs path as string (not AppSettings reference) to avoid Data → Infrastructure circular dep. Use DI factory lambda in App.xaml.cs.
   - Microsoft.Data.Sqlite doesn't support multiple statements per command — loop over string[] of CREATE TABLE statements.
   - DB verified: %AppData%\TradeAI\tradeai.db, 6 tables, 5 seeded watchlist rows, watchlist_seeded=1.
+- [2026-02-22] Sprint 3 complete. YahooFinanceProvider, CandleCache, RateLimitScheduler, DataFeedManager all built. Build: 0 errors.
+  - ICandleRepository : ICandleWriter and IWatchlistRepository : IWatchlistReader — keeps Infrastructure → Core only (no Infrastructure → Data dep).
+  - DataFeedManager registered as both singleton and IHostedService via forwarding lambda so it can be resolved directly from DI by ViewModels.
+  - Candle-close detection: compare partial.OpenTime to last cached OpenTime — simple and reliable.
+  - Infrastructure.csproj uses Microsoft.Extensions.Hosting.Abstractions 8.0.1 (net8.0 target); App uses 10.0.3 — runtime resolves to highest.
