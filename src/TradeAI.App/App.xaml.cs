@@ -8,6 +8,7 @@ using TradeAI.Data.Database;
 using TradeAI.Data.Database.Repositories;
 using TradeAI.Infrastructure.MarketData;
 using TradeAI.Infrastructure.Settings;
+using TradeAI.Infrastructure.Signals;
 using TradeAI.UI.ChartBridge;
 using TradeAI.UI.ViewModels;
 
@@ -27,6 +28,10 @@ public partial class App : Application
 
         await _host.StartAsync();
         await BootstrapDatabaseAsync();
+
+        // Eagerly resolve singletons that subscribe to SignalBus in their constructors
+        _host.Services.GetRequiredService<SignalAggregator>();
+        _host.Services.GetRequiredService<OverlayStateMachine>();
 
         var mainWindow = _host.Services.GetRequiredService<MainWindow>();
         mainWindow.Show();
@@ -58,9 +63,10 @@ public partial class App : Application
         services.AddSingleton<ISignalRepository,        SignalRepository>();
         services.AddSingleton<IFeatureVectorRepository, FeatureVectorRepository>();
         services.AddSingleton<IWatchlistRepository,     WatchlistRepository>();
-        // Forward write/read interfaces to existing singleton instances (no double-instantiation)
-        services.AddSingleton<ICandleWriter>(sp    => (ICandleWriter)sp.GetRequiredService<ICandleRepository>());
+        // Forward write/read/store interfaces to existing singleton instances (no double-instantiation)
+        services.AddSingleton<ICandleWriter>(sp   => (ICandleWriter)sp.GetRequiredService<ICandleRepository>());
         services.AddSingleton<IWatchlistReader>(sp => (IWatchlistReader)sp.GetRequiredService<IWatchlistRepository>());
+        services.AddSingleton<ISignalStore>(sp    => (ISignalStore)sp.GetRequiredService<ISignalRepository>());
 
         // ── Market data feed
         services.AddSingleton<CandleCache>();
@@ -85,7 +91,11 @@ public partial class App : Application
         services.AddSingleton<SignalBus>(_ =>
             new SignalBus(SynchronizationContext.Current));
 
-        // Sprint 6+: Signal detectors, OverlayStateMachine registered here
+        // ── Signal engine (Sprint 6)
+        services.AddSingleton<ISignalDetector, TrendContinuationDetector>();
+        // IEnumerable<ISignalDetector> is auto-resolved by DI from all registered ISignalDetector singletons
+        services.AddSingleton<SignalAggregator>();
+        services.AddSingleton<OverlayStateMachine>();
     }
 
     // ── Startup bootstrap ────────────────────────────────────────────────────

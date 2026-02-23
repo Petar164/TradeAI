@@ -18,13 +18,16 @@ public sealed class ChartViewModel
     private readonly ILogger<ChartViewModel> _logger;
 
     // Strong references so SignalBus WeakReferences stay alive for the ViewModel lifetime
-    private readonly Action<IntraCandleUpdateEvent> _onIntraCandle;
-    private readonly Action<CandleClosedEvent>      _onCandleClosed;
+    private readonly Action<IntraCandleUpdateEvent>   _onIntraCandle;
+    private readonly Action<CandleClosedEvent>        _onCandleClosed;
+    private readonly Action<SignalDetectedEvent>      _onSignalDetected;
+    private readonly Action<OverlayStateChangedEvent> _onOverlayStateChanged;
 
-    // Tokens — kept to allow future unsubscription (e.g. ViewModel teardown)
 #pragma warning disable IDE0052
     private readonly IDisposable _intraSub;
     private readonly IDisposable _closedSub;
+    private readonly IDisposable _signalSub;
+    private readonly IDisposable _overlaySub;
 #pragma warning restore IDE0052
 
     public ChartViewModel(
@@ -40,11 +43,15 @@ public sealed class ChartViewModel
         _symbolProvider = symbolProvider;
         _logger         = logger;
 
-        _onIntraCandle  = OnIntraCandleUpdated;
-        _onCandleClosed = OnCandleClosed;
+        _onIntraCandle         = OnIntraCandleUpdated;
+        _onCandleClosed        = OnCandleClosed;
+        _onSignalDetected      = OnSignalDetected;
+        _onOverlayStateChanged = OnOverlayStateChanged;
 
-        _intraSub  = _bus.Subscribe<IntraCandleUpdateEvent>(_onIntraCandle);
-        _closedSub = _bus.Subscribe<CandleClosedEvent>(_onCandleClosed);
+        _intraSub   = _bus.Subscribe<IntraCandleUpdateEvent>(_onIntraCandle);
+        _closedSub  = _bus.Subscribe<CandleClosedEvent>(_onCandleClosed);
+        _signalSub  = _bus.Subscribe<SignalDetectedEvent>(_onSignalDetected);
+        _overlaySub = _bus.Subscribe<OverlayStateChangedEvent>(_onOverlayStateChanged);
     }
 
     // ── Called from ChartView.xaml.cs (UI thread) ─────────────────────────────
@@ -97,6 +104,33 @@ public sealed class ChartViewModel
             try   { await _bridge.UpdateLastCandleAsync(e.Candle); }
             catch (Exception ex)
             { _logger.LogWarning(ex, "CandleClosed dispatch error"); }
+        });
+    }
+
+    private void OnSignalDetected(SignalDetectedEvent e)
+    {
+        if (!_bridge.IsReady) return;
+        if (e.Signal.Symbol    != _symbolProvider.ActiveSymbol    ||
+            e.Signal.Timeframe != _symbolProvider.ActiveTimeframe) return;
+
+        Application.Current.Dispatcher.BeginInvoke(async () =>
+        {
+            try   { await _bridge.DrawSignalAsync(e.Signal); }
+            catch (Exception ex)
+            { _logger.LogWarning(ex, "DrawSignal dispatch error"); }
+        });
+    }
+
+    private void OnOverlayStateChanged(OverlayStateChangedEvent e)
+    {
+        if (!_bridge.IsReady) return;
+        if (e.Symbol != _symbolProvider.ActiveSymbol) return;
+
+        Application.Current.Dispatcher.BeginInvoke(async () =>
+        {
+            try   { await _bridge.UpdateOverlayStateAsync(e.SignalId, e.NewState); }
+            catch (Exception ex)
+            { _logger.LogWarning(ex, "UpdateOverlayState dispatch error"); }
         });
     }
 }

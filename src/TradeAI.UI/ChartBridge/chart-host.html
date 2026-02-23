@@ -5,13 +5,47 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #0B0E17; }
-    #chart { width: 100%; height: 100%; }
+    /* position:relative so overlay divs are positioned relative to this container */
+    #chart { position: relative; width: 100%; height: 100%; }
+
+    /* ── Overlay base styles ──────────────────────────────────────────────── */
+    .ov-zone {
+      position: absolute;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .ov-entry {
+      background: rgba(41, 98, 255, 0.14);
+      border-top:    1px solid rgba(41, 98, 255, 0.55);
+      border-bottom: 1px solid rgba(41, 98, 255, 0.55);
+    }
+    .ov-target {
+      background: rgba(0, 193, 118, 0.12);
+      border-top:    1px solid rgba(0, 193, 118, 0.50);
+      border-bottom: 1px solid rgba(0, 193, 118, 0.50);
+    }
+    .ov-stop {
+      position: absolute;
+      pointer-events: none;
+      height: 1px;
+      background: repeating-linear-gradient(
+        90deg, #FF3B3B 0 6px, transparent 6px 10px
+      );
+      transition: opacity 0.4s ease;
+    }
+    .ov-entry.active {
+      background: rgba(41, 98, 255, 0.22);
+      border-color: rgba(41, 98, 255, 0.85);
+    }
+    @keyframes flashGreen { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    @keyframes flashRed   { 0%,100%{opacity:1} 50%{opacity:0.2} }
   </style>
 </head>
 <body>
   <div id="chart"></div>
   <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
   <script>
+    // ── Chart setup ──────────────────────────────────────────────────────────
     const chart = LightweightCharts.createChart(document.getElementById('chart'), {
       width:  window.innerWidth,
       height: window.innerHeight,
@@ -35,10 +69,8 @@
         secondsVisible: false,
         rightOffset:    8,
       },
-      rightPriceScale: {
-        borderColor: '#232838',
-      },
-      watermark: { visible: false },
+      rightPriceScale: { borderColor: '#232838' },
+      watermark:   { visible: false },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale:  { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
     });
@@ -52,34 +84,157 @@
       wickDownColor:   '#FF3B3B',
     });
 
-    // Resize chart when WebView2 container resizes
     const resizeObserver = new ResizeObserver(() => {
       chart.resize(document.getElementById('chart').clientWidth,
                    document.getElementById('chart').clientHeight);
+      repositionAll();
     });
     resizeObserver.observe(document.getElementById('chart'));
 
+    // ── Overlay store ────────────────────────────────────────────────────────
+    const overlays = {}; // id → { signal, endTime, entryZone, targetZone, stopLine, state }
+    let allMarkers = [];
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function makeDiv(cls) {
+      const d = document.createElement('div');
+      d.className = 'ov-zone ' + cls;
+      document.getElementById('chart').appendChild(d);
+      return d;
+    }
+
+    function placeRect(el, x, y, w, h) {
+      if (x === null || y === null || w <= 0 || h <= 0) { el.style.display='none'; return; }
+      el.style.display='block'; el.style.left=x+'px'; el.style.top=y+'px';
+      el.style.width=w+'px'; el.style.height=Math.max(2,h)+'px';
+    }
+
+    function placeLine(el, x, y, w) {
+      if (x === null || y === null || w <= 0) { el.style.display='none'; return; }
+      el.style.display='block'; el.style.left=x+'px'; el.style.top=y+'px'; el.style.width=w+'px';
+    }
+
+    function repositionOne(id) {
+      const ov = overlays[id]; if (!ov) return;
+      const s  = ov.signal;
+      const x0 = chart.timeScale().timeToCoordinate(s.triggerTime);
+      const x1 = chart.timeScale().timeToCoordinate(ov.endTime);
+      const w  = (x0 !== null && x1 !== null) ? Math.max(0, x1 - x0) : 0;
+
+      placeRect(ov.entryZone,  x0, series.priceToCoordinate(s.entryHigh),  w,
+        Math.abs(series.priceToCoordinate(s.entryLow)  - series.priceToCoordinate(s.entryHigh)));
+      placeRect(ov.targetZone, x0, series.priceToCoordinate(s.targetHigh), w,
+        Math.abs(series.priceToCoordinate(s.targetLow) - series.priceToCoordinate(s.targetHigh)));
+      placeLine(ov.stopLine, x0, series.priceToCoordinate(s.stopPrice), w);
+    }
+
+    function repositionAll() { for (const id in overlays) repositionOne(id); }
+
+    chart.timeScale().subscribeVisibleTimeRangeChange(repositionAll);
+    chart.subscribeCrosshairMove(repositionAll);
+
+    function removeOverlay(id) {
+      const ov = overlays[id]; if (!ov) return;
+      ov.entryZone.remove(); ov.targetZone.remove(); ov.stopLine.remove();
+      delete overlays[id];
+      allMarkers = allMarkers.filter(m => m._sid !== id);
+      series.setMarkers(allMarkers);
+    }
+
     // ── Bridge API (called from C# via ExecuteScriptAsync) ──────────────────
     window.bridge = {
+
       /** Load a full candle history. data = [{time, open, high, low, close}] */
       loadCandles(data) {
         series.setData(data);
         chart.timeScale().fitContent();
+        for (const id in overlays) removeOverlay(id);
+        allMarkers = [];
       },
 
       /** Update or append the latest (partial) candle. */
       updateLastCandle(bar) {
         series.update(bar);
+        repositionAll();
+      },
+
+      /**
+       * Draw a signal overlay.
+       * signal = { id, triggerTime, ttlCandles, timeframeSeconds,
+       *            entryLow, entryHigh, stopPrice, targetLow, targetHigh,
+       *            direction, confidencePct }
+       */
+      drawSignal(signal) {
+        if (overlays[signal.id]) removeOverlay(signal.id);
+
+        const endTime    = signal.triggerTime + signal.ttlCandles * signal.timeframeSeconds;
+        const entryZone  = makeDiv('ov-entry');
+        const targetZone = makeDiv('ov-target');
+        const stopLine   = document.createElement('div');
+        stopLine.className = 'ov-stop';
+        document.getElementById('chart').appendChild(stopLine);
+
+        overlays[signal.id] = { signal, endTime, entryZone, targetZone, stopLine, state: 'Pending' };
+
+        const isLong = signal.direction === 'Long';
+        const marker = {
+          _sid:     signal.id,
+          time:     signal.triggerTime,
+          position: isLong ? 'belowBar' : 'aboveBar',
+          color:    isLong ? '#2962FF'  : '#FF6D00',
+          shape:    isLong ? 'arrowUp'  : 'arrowDown',
+          text:     signal.confidencePct != null ? Math.round(signal.confidencePct) + '%' : 'TC',
+          size: 2,
+        };
+        allMarkers = [...allMarkers, marker].sort((a, b) => a.time - b.time);
+        series.setMarkers(allMarkers);
+
+        repositionOne(signal.id);
+      },
+
+      /** Update visual state: 'Active' | 'TargetHit' | 'StopHit' | 'Expired' */
+      updateOverlayState(id, state) {
+        const ov = overlays[id]; if (!ov) return;
+        ov.state = state;
+        switch (state) {
+          case 'Active':
+            ov.entryZone.classList.add('active');
+            break;
+          case 'TargetHit':
+            ov.targetZone.style.background = 'rgba(0,193,118,0.45)';
+            ov.targetZone.style.animation  = 'flashGreen 0.6s ease 2';
+            ov.entryZone.style.opacity     = '0.25';
+            setTimeout(() => removeOverlay(id), 5000);
+            break;
+          case 'StopHit':
+            ov.stopLine.style.background = '#FF3B3B';
+            ov.stopLine.style.height     = '2px';
+            ov.stopLine.style.animation  = 'flashRed 0.6s ease 2';
+            ov.entryZone.style.opacity   = '0.25';
+            ov.targetZone.style.opacity  = '0.15';
+            setTimeout(() => removeOverlay(id), 5000);
+            break;
+          case 'Expired':
+            ov.entryZone.style.opacity  = '0.10';
+            ov.targetZone.style.opacity = '0.10';
+            ov.stopLine.style.opacity   = '0.10';
+            setTimeout(() => removeOverlay(id), 5000);
+            break;
+        }
+      },
+
+      /** Remove all Expired overlays immediately. */
+      clearExpiredOverlays() {
+        for (const id in overlays)
+          if (overlays[id].state === 'Expired') removeOverlay(id);
       },
     };
 
     // ── Notify C# that the chart is ready ───────────────────────────────────
     function notifyReady() {
-      if (window.chrome && window.chrome.webview) {
+      if (window.chrome && window.chrome.webview)
         window.chrome.webview.postMessage(JSON.stringify({ type: 'CHART_READY' }));
-      }
     }
-    // Small delay so C# WebMessageReceived handler is guaranteed to be wired up
     setTimeout(notifyReady, 100);
   </script>
 </body>

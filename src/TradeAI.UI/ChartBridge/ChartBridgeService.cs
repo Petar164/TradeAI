@@ -95,6 +95,51 @@ public sealed class ChartBridgeService
         await _webView.ExecuteScriptAsync($"window.bridge.updateLastCandle({json})");
     }
 
+    // ── Signal overlay commands ───────────────────────────────────────────────
+
+    /// <summary>Serialize signal and call window.bridge.drawSignal().</summary>
+    public async Task DrawSignalAsync(Signal signal)
+    {
+        if (!IsReady || _webView == null) return;
+
+        var data = new
+        {
+            id               = signal.Id,
+            triggerTime      = signal.DetectedAtCandleTime.ToUnixTimeSeconds(),
+            ttlCandles       = signal.TtlCandles,
+            timeframeSeconds = TimeframeToSeconds(signal.Timeframe),
+            entryLow         = signal.EntryLow,
+            entryHigh        = signal.EntryHigh,
+            stopPrice        = signal.StopPrice,
+            targetLow        = signal.TargetLow,
+            targetHigh       = signal.TargetHigh,
+            direction        = signal.Direction.ToString(),
+            confidencePct    = signal.ConfidencePct,
+        };
+        var json = JsonSerializer.Serialize(data);
+        await _webView.ExecuteScriptAsync($"window.bridge.drawSignal({json})");
+    }
+
+    /// <summary>Call window.bridge.updateOverlayState(id, state).</summary>
+    public async Task UpdateOverlayStateAsync(int signalId, OverlayState state)
+    {
+        if (!IsReady || _webView == null) return;
+        await _webView.ExecuteScriptAsync(
+            $"window.bridge.updateOverlayState({signalId}, '{state}')");
+    }
+
+    private static int TimeframeToSeconds(string tf) => tf switch
+    {
+        "1m"  => 60,
+        "5m"  => 300,
+        "15m" => 900,
+        "30m" => 1_800,
+        "1h"  => 3_600,
+        "4h"  => 14_400,
+        "1d"  => 86_400,
+        _     => 300,
+    };
+
     // ── JS → C# messages ─────────────────────────────────────────────────────
 
     private void OnWebMessageReceived(object? sender,
