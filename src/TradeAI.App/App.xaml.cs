@@ -2,6 +2,7 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TradeAI.Core.Interfaces;
+using TradeAI.Core.Messaging;
 using TradeAI.Core.Models;
 using TradeAI.Data.Database;
 using TradeAI.Data.Database.Repositories;
@@ -80,7 +81,10 @@ public partial class App : Application
         // ── UI
         services.AddTransient<MainWindow>();
 
-        // Sprint 5: SignalBus registered here
+        // ── SignalBus (Sprint 5) — capture WPF SynchronizationContext after UI thread is ready
+        services.AddSingleton<SignalBus>(_ =>
+            new SignalBus(SynchronizationContext.Current));
+
         // Sprint 6+: Signal detectors, OverlayStateMachine registered here
     }
 

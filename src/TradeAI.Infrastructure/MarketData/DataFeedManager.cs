@@ -2,6 +2,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TradeAI.Core.Events;
 using TradeAI.Core.Interfaces;
+using TradeAI.Core.Messaging;
+using TradeAI.Core.Messaging.Events;
 using TradeAI.Core.Models;
 using TradeAI.Infrastructure.Settings;
 
@@ -25,12 +27,13 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
     public event EventHandler<CandleEventArgs>? CandleClosed;
 
     // ── Dependencies ──────────────────────────────────────────────────────────
-    private readonly IMarketDataProvider _provider;
-    private readonly CandleCache         _cache;
-    private readonly RateLimitScheduler  _scheduler;
-    private readonly ICandleWriter       _candleWriter;
-    private readonly IWatchlistReader    _watchlistReader;
-    private readonly AppSettings         _settings;
+    private readonly IMarketDataProvider      _provider;
+    private readonly CandleCache              _cache;
+    private readonly RateLimitScheduler       _scheduler;
+    private readonly ICandleWriter            _candleWriter;
+    private readonly IWatchlistReader         _watchlistReader;
+    private readonly AppSettings              _settings;
+    private readonly SignalBus                _bus;
     private readonly ILogger<DataFeedManager> _logger;
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -51,6 +54,7 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
         ICandleWriter            candleWriter,
         IWatchlistReader         watchlistReader,
         AppSettings              settings,
+        SignalBus                bus,
         ILogger<DataFeedManager> logger)
     {
         _provider        = provider;
@@ -59,6 +63,7 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
         _candleWriter    = candleWriter;
         _watchlistReader = watchlistReader;
         _settings        = settings;
+        _bus             = bus;
         _logger          = logger;
         _activeSymbol    = settings.ActiveSymbol;
         _activeTimeframe = settings.ActiveTimeframe;
@@ -106,6 +111,7 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
         _settings.ActiveSymbol    = symbol;
         _settings.ActiveTimeframe = timeframe;
         _reloadRequested = true;
+        _bus.Publish(new ActiveSymbolChangedEvent(symbol, timeframe));
         _logger.LogInformation("Active symbol changed → {Symbol} {Timeframe}", symbol, timeframe);
     }
 
@@ -144,12 +150,14 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
                     if (completed != null)
                     {
                         await _candleWriter.UpsertAsync(completed);
-                        CandleClosed?.Invoke(this, new CandleEventArgs
+                        var closedArgs = new CandleEventArgs
                         {
                             Symbol    = _activeSymbol,
                             Timeframe = _activeTimeframe,
                             Candle    = completed,
-                        });
+                        };
+                        CandleClosed?.Invoke(this, closedArgs);
+                        _bus.Publish(new CandleClosedEvent(_activeSymbol, _activeTimeframe, completed));
                         _logger.LogDebug("Candle closed {Symbol} {Timeframe} @ {Time}",
                             _activeSymbol, _activeTimeframe, completed.OpenTime);
                     }
@@ -158,12 +166,14 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
                 _lastActiveOpenTime = partial.OpenTime;
                 _cache.UpdateLastOrAppend(_activeSymbol, _activeTimeframe, partial);
 
-                IntraCandleUpdated?.Invoke(this, new CandleEventArgs
+                var intraCandleArgs = new CandleEventArgs
                 {
                     Symbol    = _activeSymbol,
                     Timeframe = _activeTimeframe,
                     Candle    = partial,
-                });
+                };
+                IntraCandleUpdated?.Invoke(this, intraCandleArgs);
+                _bus.Publish(new IntraCandleUpdateEvent(_activeSymbol, _activeTimeframe, partial));
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
@@ -211,6 +221,7 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
                             Timeframe = _activeTimeframe,
                             Candle    = partial,
                         });
+                        _bus.Publish(new CandleClosedEvent(item.Symbol, _activeTimeframe, partial));
                     }
 
                     await Task.Delay(_settings.WatchlistBatchDelayMs, ct);
