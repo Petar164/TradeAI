@@ -43,7 +43,7 @@
 </head>
 <body>
   <div id="chart"></div>
-  <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+  <!-- __LIGHTWEIGHT_CHARTS_SCRIPT__ -->
   <script>
     // ── Chart setup ──────────────────────────────────────────────────────────
     const chart = LightweightCharts.createChart(document.getElementById('chart'), {
@@ -177,13 +177,32 @@
         overlays[signal.id] = { signal, endTime, entryZone, targetZone, stopLine, state: 'Pending' };
 
         const isLong = signal.direction === 'Long';
+        // Per signal-type arrow colours
+        const typeColors = {
+          TrendContinuation: '#2962FF',  // blue
+          BreakoutRetest:    '#FF6D00',  // orange
+          MeanReversion:     '#AA00FF',  // purple
+          SRBounce:          '#FFD600',  // yellow
+        };
+        const typeLabels = {
+          TrendContinuation: 'TC',
+          BreakoutRetest:    'BR',
+          MeanReversion:     'MR',
+          SRBounce:          'SR',
+        };
+        const arrowColor = typeColors[signal.signalType] ?? (isLong ? '#2962FF' : '#FF6D00');
+        const typeLabel  = typeLabels[signal.signalType] ?? signal.signalType;
+        const labelText  = signal.confidencePct != null
+          ? Math.round(signal.confidencePct) + '%'
+          : typeLabel;
+
         const marker = {
           _sid:     signal.id,
           time:     signal.triggerTime,
           position: isLong ? 'belowBar' : 'aboveBar',
-          color:    isLong ? '#2962FF'  : '#FF6D00',
+          color:    arrowColor,
           shape:    isLong ? 'arrowUp'  : 'arrowDown',
-          text:     signal.confidencePct != null ? Math.round(signal.confidencePct) + '%' : 'TC',
+          text:     labelText,
           size: 2,
         };
         allMarkers = [...allMarkers, marker].sort((a, b) => a.time - b.time);

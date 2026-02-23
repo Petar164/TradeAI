@@ -35,13 +35,19 @@ public sealed class ChartBridgeService
         await webView.EnsureCoreWebView2Async();
         webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
-        // Load chart-host.html from this assembly's embedded resources
-        var asm  = typeof(ChartBridgeService).Assembly;
-        var name = "TradeAI.UI.ChartBridge.chart-host.html";
-        await using var stream = asm.GetManifestResourceStream(name)
-            ?? throw new FileNotFoundException($"Embedded resource not found: {name}");
-        using var reader = new StreamReader(stream);
-        var html = await reader.ReadToEndAsync();
+        // Load chart-host.html and inline the bundled LightweightCharts script
+        var asm = typeof(ChartBridgeService).Assembly;
+
+        await using var htmlStream = asm.GetManifestResourceStream("TradeAI.UI.ChartBridge.chart-host.html")
+            ?? throw new FileNotFoundException("Embedded resource not found: chart-host.html");
+        var html = await new StreamReader(htmlStream).ReadToEndAsync();
+
+        await using var jsStream = asm.GetManifestResourceStream(
+                "TradeAI.UI.ChartBridge.lightweight-charts.standalone.production.js")
+            ?? throw new FileNotFoundException("Embedded resource not found: lightweight-charts.js");
+        var js = await new StreamReader(jsStream).ReadToEndAsync();
+
+        html = html.Replace("<!-- __LIGHTWEIGHT_CHARTS_SCRIPT__ -->", $"<script>{js}</script>");
         webView.NavigateToString(html);
 
         // Wait up to 30 s for CHART_READY
@@ -105,6 +111,7 @@ public sealed class ChartBridgeService
         var data = new
         {
             id               = signal.Id,
+            signalType       = signal.SignalType,
             triggerTime      = signal.DetectedAtCandleTime.ToUnixTimeSeconds(),
             ttlCandles       = signal.TtlCandles,
             timeframeSeconds = TimeframeToSeconds(signal.Timeframe),
@@ -131,6 +138,7 @@ public sealed class ChartBridgeService
     private static int TimeframeToSeconds(string tf) => tf switch
     {
         "1m"  => 60,
+        "3m"  => 180,
         "5m"  => 300,
         "15m" => 900,
         "30m" => 1_800,

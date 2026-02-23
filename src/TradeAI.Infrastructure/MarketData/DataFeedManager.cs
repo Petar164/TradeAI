@@ -261,6 +261,8 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
 
             _logger.LogInformation("Loaded {Count} candles for {Symbol}/{Timeframe}",
                 candles.Count, symbol, timeframe);
+
+            _bus.Publish(new HistoricalDataReadyEvent(symbol, timeframe));
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)

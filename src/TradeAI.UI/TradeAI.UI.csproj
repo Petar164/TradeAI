@@ -11,9 +11,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
   </ItemGroup>
 
-  <!-- chart-host.html embedded so ChartBridgeService can load it via GetManifestResourceStream -->
+  <!-- Chart assets embedded so ChartBridgeService can load them via GetManifestResourceStream -->
   <ItemGroup>
     <EmbeddedResource Include="ChartBridge\chart-host.html" />
+    <EmbeddedResource Include="ChartBridge\lightweight-charts.standalone.production.js" />
   </ItemGroup>
 
   <PropertyGroup>

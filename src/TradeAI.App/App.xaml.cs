@@ -91,9 +91,12 @@ public partial class App : Application
         services.AddSingleton<SignalBus>(_ =>
             new SignalBus(SynchronizationContext.Current));
 
-        // ── Signal engine (Sprint 6)
-        services.AddSingleton<ISignalDetector, TrendContinuationDetector>();
+        // ── Signal engine (Sprints 6 + 7)
         // IEnumerable<ISignalDetector> is auto-resolved by DI from all registered ISignalDetector singletons
+        services.AddSingleton<ISignalDetector, TrendContinuationDetector>();
+        services.AddSingleton<ISignalDetector, BreakoutRetestDetector>();
+        services.AddSingleton<ISignalDetector, MeanReversionDetector>();
+        services.AddSingleton<ISignalDetector, SupportResistanceBounceDetector>();
         services.AddSingleton<SignalAggregator>();
         services.AddSingleton<OverlayStateMachine>();
     }

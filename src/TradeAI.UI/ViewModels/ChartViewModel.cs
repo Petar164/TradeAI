@@ -18,16 +18,18 @@ public sealed class ChartViewModel
     private readonly ILogger<ChartViewModel> _logger;
 
     // Strong references so SignalBus WeakReferences stay alive for the ViewModel lifetime
-    private readonly Action<IntraCandleUpdateEvent>   _onIntraCandle;
-    private readonly Action<CandleClosedEvent>        _onCandleClosed;
-    private readonly Action<SignalDetectedEvent>      _onSignalDetected;
-    private readonly Action<OverlayStateChangedEvent> _onOverlayStateChanged;
+    private readonly Action<IntraCandleUpdateEvent>    _onIntraCandle;
+    private readonly Action<CandleClosedEvent>         _onCandleClosed;
+    private readonly Action<SignalDetectedEvent>       _onSignalDetected;
+    private readonly Action<OverlayStateChangedEvent>  _onOverlayStateChanged;
+    private readonly Action<HistoricalDataReadyEvent>  _onHistoricalReady;
 
 #pragma warning disable IDE0052
     private readonly IDisposable _intraSub;
     private readonly IDisposable _closedSub;
     private readonly IDisposable _signalSub;
     private readonly IDisposable _overlaySub;
+    private readonly IDisposable _historySub;
 #pragma warning restore IDE0052
 
     public ChartViewModel(
@@ -47,11 +49,13 @@ public sealed class ChartViewModel
         _onCandleClosed        = OnCandleClosed;
         _onSignalDetected      = OnSignalDetected;
         _onOverlayStateChanged = OnOverlayStateChanged;
+        _onHistoricalReady     = OnHistoricalDataReady;
 
         _intraSub   = _bus.Subscribe<IntraCandleUpdateEvent>(_onIntraCandle);
         _closedSub  = _bus.Subscribe<CandleClosedEvent>(_onCandleClosed);
         _signalSub  = _bus.Subscribe<SignalDetectedEvent>(_onSignalDetected);
         _overlaySub = _bus.Subscribe<OverlayStateChangedEvent>(_onOverlayStateChanged);
+        _historySub = _bus.Subscribe<HistoricalDataReadyEvent>(_onHistoricalReady);
     }
 
     // ── Called from ChartView.xaml.cs (UI thread) ─────────────────────────────
@@ -77,6 +81,20 @@ public sealed class ChartViewModel
             _symbolProvider.ActiveSymbol, _symbolProvider.ActiveTimeframe, 200);
         if (candles.Count > 0)
             await _bridge.LoadCandlesAsync(candles);
+    }
+
+    private void OnHistoricalDataReady(HistoricalDataReadyEvent e)
+    {
+        if (!_bridge.IsReady) return;
+        if (e.Symbol    != _symbolProvider.ActiveSymbol    ||
+            e.Timeframe != _symbolProvider.ActiveTimeframe) return;
+
+        Application.Current.Dispatcher.BeginInvoke(async () =>
+        {
+            try   { await ReloadCandlesAsync(); }
+            catch (Exception ex)
+            { _logger.LogWarning(ex, "HistoricalDataReady reload error"); }
+        });
     }
 
     private void OnIntraCandleUpdated(IntraCandleUpdateEvent e)

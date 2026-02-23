@@ -628,8 +628,8 @@
 ## CURRENT STATUS
 
 ```
-Active Sprint: Sprint 5 — Event Bus + Indicator Helpers
-Last Completed Sprint: Sprint 4 — Chart Display ✅ (2026-02-22)
+Active Sprint: Sprint 8 — Similarity Engine + Probability Score
+Last Completed Sprint: Sprint 7 — Remaining Signal Detectors ✅ (2026-02-23)
 Blocked: No blockers
 ```
 
@@ -664,3 +664,17 @@ Blocked: No blockers
   - DataFeedManager registered as both singleton and IHostedService via forwarding lambda so it can be resolved directly from DI by ViewModels.
   - Candle-close detection: compare partial.OpenTime to last cached OpenTime — simple and reliable.
   - Infrastructure.csproj uses Microsoft.Extensions.Hosting.Abstractions 8.0.1 (net8.0 target); App uses 10.0.3 — runtime resolves to highest.
+- [2026-02-23] Sprint 5 complete. SignalBus (WeakReference pub/sub, SynchronizationContext dispatch), 6 event types, Indicators static class (EMA/ATR/RSI/BollingerBands/VWAP), 24 unit tests all passing. Build: 0 errors.
+  - Candle record uses PascalCase named params — test helpers must use Open:/High:/Low:/Close:/Volume:.
+  - Store delegate fields as strong references in subscribers to keep SignalBus WeakReferences alive.
+- [2026-02-23] Sprint 6 complete. TrendContinuationDetector, SignalAggregator, OverlayStateMachine, chart overlay drawing (HTML div zones + LightweightCharts markers). Build: 0 errors.
+  - ISignalStore in Core avoids Infrastructure → Data dep. ISignalRepository : ISignalStore.
+  - Chart overlays: position:relative on #chart container, absolute-positioned divs, reposition on timeScale scroll/scale events.
+  - Eager DI resolution of SignalAggregator and OverlayStateMachine at startup so they subscribe to SignalBus before first CandleClosedEvent.
+- [2026-02-23] Sprint 7 complete. BreakoutRetestDetector, MeanReversionDetector, SupportResistanceBounceDetector. All 4 detectors registered via DI. Build: 0 errors.
+  - Duplicate signal prevention in SignalAggregator: HashSet of active (symbol, direction) pairs, cleared on terminal OverlayStateChangedEvent.
+  - Per-type arrow colours: TrendContinuation=blue, BreakoutRetest=orange, MeanReversion=purple, SRBounce=yellow.
+  - signalType field added to ChartBridgeService DrawSignalAsync serialization so JS can apply per-type colours.
+  - Yahoo Finance v8 API now requires crumb+cookie auth (2024+): updated YahooFinanceProvider with CookieContainer and crumb fetch from query2.finance.yahoo.com/v1/test/getcrumb.
+  - LightweightCharts bundled as EmbeddedResource (lightweight-charts.standalone.production.js, 157KB) — no CDN dependency, works offline.
+  - HistoricalDataReadyEvent added: DataFeedManager publishes after initial candle load; ChartViewModel subscribes and reloads chart. Fixes race condition where chart queries DB before data arrives.
