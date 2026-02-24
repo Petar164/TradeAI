@@ -7,6 +7,7 @@ using TradeAI.Core.Models;
 using TradeAI.Data.Database;
 using TradeAI.Data.Database.Repositories;
 using TradeAI.Infrastructure.MarketData;
+using TradeAI.Infrastructure.RiskManagement;
 using TradeAI.Infrastructure.Settings;
 using TradeAI.Infrastructure.Signals;
 using TradeAI.UI.ChartBridge;
@@ -28,6 +29,22 @@ public partial class App : Application
 
         await _host.StartAsync();
         await BootstrapDatabaseAsync();
+
+        // Sprint 9 — Risk profile service loads from DB (falls back to Default if none set)
+        var riskService = _host.Services.GetRequiredService<IRiskProfileService>();
+        await riskService.LoadAsync();
+
+        // Show onboarding wizard on first launch
+        var db = _host.Services.GetRequiredService<AppDbContext>();
+        if (await db.GetSettingAsync("onboarding_complete") != "1")
+        {
+            var wizard = new RiskProfileWizard();
+            if (wizard.ShowDialog() == true && wizard.Result is not null)
+            {
+                await riskService.SaveAsync(wizard.Result);
+                await db.SetSettingAsync("onboarding_complete", "1");
+            }
+        }
 
         // Eagerly resolve singletons that subscribe to SignalBus in their constructors
         _host.Services.GetRequiredService<SignalAggregator>();
@@ -63,6 +80,7 @@ public partial class App : Application
         services.AddSingleton<ISignalRepository,        SignalRepository>();
         services.AddSingleton<IFeatureVectorRepository, FeatureVectorRepository>();
         services.AddSingleton<IWatchlistRepository,     WatchlistRepository>();
+        services.AddSingleton<IRiskProfileRepository,   RiskProfileRepository>();
         // Forward write/read/store interfaces to existing singleton instances (no double-instantiation)
         services.AddSingleton<ICandleWriter>(sp   => (ICandleWriter)sp.GetRequiredService<ICandleRepository>());
         services.AddSingleton<IWatchlistReader>(sp => (IWatchlistReader)sp.GetRequiredService<IWatchlistRepository>());
@@ -103,6 +121,9 @@ public partial class App : Application
         services.AddSingleton<ISimilarityEngine, SimilarityEngine>();
         services.AddSingleton<SignalAggregator>();
         services.AddSingleton<OverlayStateMachine>();
+
+        // Sprint 9 — Risk profile system
+        services.AddSingleton<IRiskProfileService, RiskProfileService>();
     }
 
     // ── Startup bootstrap ────────────────────────────────────────────────────

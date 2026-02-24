@@ -21,6 +21,7 @@ packages/
 
 # Claude session files
 .claude/
+tmpclaude-*
 
 # OS
 .DS_Store

@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using TradeAI.Core.Interfaces;
 using TradeAI.Core.Messaging;
 using TradeAI.Core.Messaging.Events;
 using TradeAI.Core.Models;
@@ -12,9 +14,10 @@ namespace TradeAI.App;
 
 public partial class MainWindow : Window
 {
-    private readonly ChartViewModel  _chartVm;
-    private readonly DataFeedManager _feedManager;
-    private readonly AppSettings     _settings;
+    private readonly ChartViewModel      _chartVm;
+    private readonly DataFeedManager     _feedManager;
+    private readonly AppSettings         _settings;
+    private readonly IRiskProfileService _riskService;
 
     // Track signal cards by ID so we can update them on state change
     private readonly Dictionary<int, Border> _signalCards = new();
@@ -30,14 +33,16 @@ public partial class MainWindow : Window
 #pragma warning restore IDE0052
 
     public MainWindow(
-        ChartViewModel  chartVm,
-        DataFeedManager feedManager,
-        AppSettings     settings,
-        SignalBus       bus)
+        ChartViewModel       chartVm,
+        DataFeedManager      feedManager,
+        AppSettings          settings,
+        SignalBus            bus,
+        IRiskProfileService  riskService)
     {
         _chartVm     = chartVm;
         _feedManager = feedManager;
         _settings    = settings;
+        _riskService = riskService;
 
         _onSignalDetected      = OnSignalDetected;
         _onOverlayStateChanged = OnOverlayStateChanged;
@@ -293,6 +298,35 @@ public partial class MainWindow : Window
         });
         Grid.SetColumn(sp, col);
         return sp;
+    }
+
+    // ── Chat override bar ─────────────────────────────────────────────────────
+
+    private void ChatSendButton_Click(object sender, RoutedEventArgs e)
+        => SendChatCommand();
+
+    private void ChatInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            SendChatCommand();
+            e.Handled = true;
+        }
+    }
+
+    private void SendChatCommand()
+    {
+        var text = ChatInput.Text.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+
+        var response = _riskService.ApplyOverride(text);
+
+        ChatInput.Clear();
+        ChatResponseLabel.Text       = response ?? "Command not recognised. Try: \"too risky\", \"widen stops\", \"reset\".";
+        ChatResponseLabel.Foreground = response is not null
+            ? (System.Windows.Media.Brush)FindResource("BrushAccent")
+            : new SolidColorBrush(Color.FromRgb(255, 59, 59));
+        ChatResponseLabel.Visibility = Visibility.Visible;
     }
 
     // ── Window sizing ──────────────────────────────────────────────────────────

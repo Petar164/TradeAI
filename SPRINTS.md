@@ -628,8 +628,8 @@
 ## CURRENT STATUS
 
 ```
-Active Sprint: Sprint 9 — Risk Profile System
-Last Completed Sprint: Sprint 8 — Similarity Engine + Probability Score ✅ (2026-02-24)
+Active Sprint: Sprint 10 — UX Polish + Animations
+Last Completed Sprint: Sprint 9 — Risk Profile System ✅ (2026-02-24)
 Blocked: No blockers
 ```
 
@@ -685,4 +685,10 @@ Blocked: No blockers
   - Chart badge format: "68% (7/10)" — sampleCount field added to ChartBridgeService DrawSignalAsync payload.
   - Signal panel cards built programmatically in MainWindow code-behind on SignalDetectedEvent; card updates (dim/border colour) on OverlayStateChangedEvent.
   - Neighbour outcome squares approximated from ConfidencePct × SampleCount (exact per-neighbour outcomes not stored on Signal record; sufficient for display).
+- [2026-02-24] Sprint 9 complete. Risk profile system: first-launch wizard, StopPlacementCalculator, PositionSizeCalculator, RiskProfileService, chat override bar. Build: 0 errors.
+  - IRiskProfileRepository in Core/Interfaces + RiskProfileRepository in Data + RiskProfileService in Infrastructure — same dep-inversion pattern as IFeatureVectorStore.
+  - OnBoarding wizard is a plain WPF Window (not DI-resolved) — ShowDialog() returns bool, Result property carries the completed profile. Skipping uses RiskProfile.Default.
+  - LoadAsync() called before wizard check; if no saved profile, Default is used until wizard completes and SaveAsync() persists the user's choices.
+  - RiskProfileService.ApplyOverride() does keyword substring matching (lowercase) — "too risky", "aggressive", "tighten stop", "widen stop", "reset". Returns null for unrecognised commands.
+  - ChatResponseLabel shown in accent colour on success, red on unrecognised command; cleared when user types next command.
   - OverlayStateMachine now records binary outcomes: RecordOutcomeAsync(id, 1) on TargetHit, RecordOutcomeAsync(id, 0) on StopHit. Expired signals not counted.
