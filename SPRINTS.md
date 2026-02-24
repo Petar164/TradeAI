@@ -628,8 +628,8 @@
 ## CURRENT STATUS
 
 ```
-Active Sprint: Sprint 8 — Similarity Engine + Probability Score
-Last Completed Sprint: Sprint 7 — Remaining Signal Detectors ✅ (2026-02-23)
+Active Sprint: Sprint 9 — Risk Profile System
+Last Completed Sprint: Sprint 8 — Similarity Engine + Probability Score ✅ (2026-02-24)
 Blocked: No blockers
 ```
 
@@ -678,3 +678,11 @@ Blocked: No blockers
   - Yahoo Finance v8 API now requires crumb+cookie auth (2024+): updated YahooFinanceProvider with CookieContainer and crumb fetch from query2.finance.yahoo.com/v1/test/getcrumb.
   - LightweightCharts bundled as EmbeddedResource (lightweight-charts.standalone.production.js, 157KB) — no CDN dependency, works offline.
   - HistoricalDataReadyEvent added: DataFeedManager publishes after initial candle load; ChartViewModel subscribes and reloads chart. Fixes race condition where chart queries DB before data arrives.
+- [2026-02-24] Sprint 8 complete. SimilarityEngine (Euclidean kNN, K=10), FeatureVectorBuilder (20 features), probability badge on chart and signal panel cards. Build: 0 errors.
+  - IFeatureVectorStore in Core (matching IFeatureVectorRepository) so Infrastructure→Data dep avoided via forwarding singleton in App.xaml.cs.
+  - FeatureVectorBuilder normalises 20 features to [0,1] using domain-knowledge bounds (no running min/max needed — fixed bounds are consistent across all stored vectors).
+  - Probability requires ≥10 labelled samples; returns null otherwise — chart shows signal type label (TC/BR/MR/SR) until enough history accumulates.
+  - Chart badge format: "68% (7/10)" — sampleCount field added to ChartBridgeService DrawSignalAsync payload.
+  - Signal panel cards built programmatically in MainWindow code-behind on SignalDetectedEvent; card updates (dim/border colour) on OverlayStateChangedEvent.
+  - Neighbour outcome squares approximated from ConfidencePct × SampleCount (exact per-neighbour outcomes not stored on Signal record; sufficient for display).
+  - OverlayStateMachine now records binary outcomes: RecordOutcomeAsync(id, 1) on TargetHit, RecordOutcomeAsync(id, 0) on StopHit. Expired signals not counted.

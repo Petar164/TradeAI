@@ -11,11 +11,16 @@ namespace TradeAI.Infrastructure.Signals;
 /// Subscribes to <see cref="CandleClosedEvent"/> via the SignalBus.
 /// On each close it runs all registered <see cref="ISignalDetector"/> implementations
 /// (first match wins), checks for duplicate active signals (same symbol+direction),
-/// persists to DB, then publishes a <see cref="SignalDetectedEvent"/> so the UI draws the overlay.
+/// computes a probability score via <see cref="ISimilarityEngine"/>, persists to DB,
+/// stores the feature vector, then publishes a <see cref="SignalDetectedEvent"/>
+/// so the UI draws the overlay.
 ///
 /// Sprint 7: duplicate prevention — if an active signal already exists for the same
 /// symbol + direction, the new signal is discarded.  The active-signal map is updated
 /// when <see cref="OverlayStateChangedEvent"/> fires with a terminal state.
+///
+/// Sprint 8: similarity engine integrated — feature vectors built and stored on
+/// each detection; probability score attached to the signal before publishing.
 /// </summary>
 public sealed class SignalAggregator
 {
@@ -23,6 +28,8 @@ public sealed class SignalAggregator
     private readonly CandleCache                    _cache;
     private readonly ISignalStore                   _signalStore;
     private readonly IActiveSymbolProvider          _symbolProvider;
+    private readonly FeatureVectorBuilder           _vectorBuilder;
+    private readonly ISimilarityEngine              _similarity;
     private readonly SignalBus                      _bus;
     private readonly ILogger<SignalAggregator>      _logger;
 
@@ -44,6 +51,8 @@ public sealed class SignalAggregator
         CandleCache                     cache,
         ISignalStore                    signalStore,
         IActiveSymbolProvider           symbolProvider,
+        FeatureVectorBuilder            vectorBuilder,
+        ISimilarityEngine               similarity,
         SignalBus                       bus,
         ILogger<SignalAggregator>       logger)
     {
@@ -51,6 +60,8 @@ public sealed class SignalAggregator
         _cache          = cache;
         _signalStore    = signalStore;
         _symbolProvider = symbolProvider;
+        _vectorBuilder  = vectorBuilder;
+        _similarity     = similarity;
         _bus            = bus;
         _logger         = logger;
 
@@ -88,6 +99,7 @@ public sealed class SignalAggregator
             var candles = _cache.TryGet(symbol, timeframe);
             if (candles == null || candles.Count < 60) return;
 
+            // ── Run detectors (first match wins) ──────────────────────────────
             Signal? signal = null;
             foreach (var detector in _detectors)
             {
@@ -110,14 +122,34 @@ public sealed class SignalAggregator
                 }
             }
 
-            // Persist and get DB-assigned id
+            // ── Build feature vector ──────────────────────────────────────────
+            float[] vector = _vectorBuilder.Build(candles);
+
+            // ── Compute probability from historical kNN ───────────────────────
+            var prob = await _similarity.ComputeProbabilityAsync(vector, signal.SignalType);
+            if (prob != null)
+            {
+                signal = signal with
+                {
+                    ConfidencePct         = prob.Probability,
+                    SimilaritySampleCount = prob.SampleCount,
+                    HistoricalHitRatePct  = prob.HitRate * 100.0,
+                };
+            }
+
+            // ── Persist and get DB-assigned id ───────────────────────────────
             var id = await _signalStore.InsertAsync(signal);
             signal = signal with { Id = id };
 
+            // ── Store feature vector for future kNN lookups ───────────────────
+            await _similarity.StoreVectorAsync(id, signal.SignalType, vector);
+
             lock (_activeLock) { _activeSignals[id] = (symbol, signal.Direction); }
 
-            _logger.LogInformation("Signal detected: {Type} {Symbol} {Timeframe} id={Id}",
-                signal.SignalType, symbol, timeframe, id);
+            _logger.LogInformation(
+                "Signal detected: {Type} {Direction} {Symbol} {Timeframe} id={Id} prob={Prob}",
+                signal.SignalType, signal.Direction, symbol, timeframe, id,
+                prob != null ? $"{prob.Probability:F1}%" : "—");
 
             _bus.Publish(new SignalDetectedEvent(signal));
         }

@@ -1,8 +1,12 @@
+using TradeAI.Core.Interfaces;
+
 namespace TradeAI.Data.Database.Repositories;
 
-public interface IFeatureVectorRepository
+/// <summary>
+/// Extends <see cref="IFeatureVectorStore"/> with any Data-layer-specific members.
+/// Currently identical — the base interface is used by Infrastructure via DI forwarding.
+/// </summary>
+public interface IFeatureVectorRepository : IFeatureVectorStore
 {
-    Task InsertAsync(int signalId, string signalType, string vectorJson, int? outcome = null);
-    Task RecordOutcomeAsync(int signalId, int outcome);
-    Task<List<(string VectorJson, int? Outcome)>> GetByTypeAsync(string signalType);
+    // All members inherited from IFeatureVectorStore.
 }

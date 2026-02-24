@@ -20,6 +20,9 @@ namespace TradeAI.Infrastructure.Signals;
 ///   • OverlayStateChangedEvent published on the SignalBus
 ///
 /// Terminal states (TargetHit, StopHit, Expired) remove the overlay from tracking.
+///
+/// Sprint 8: on TargetHit / StopHit the binary outcome is recorded via
+///   <see cref="ISimilarityEngine"/> so future kNN lookups have labelled data.
 /// </summary>
 public sealed class OverlayStateMachine
 {
@@ -28,6 +31,7 @@ public sealed class OverlayStateMachine
     private readonly Dictionary<int, Entry>        _overlays = new();
     private readonly object                        _lock     = new();
     private readonly ISignalStore                  _store;
+    private readonly ISimilarityEngine             _similarity;
     private readonly SignalBus                     _bus;
     private readonly ILogger<OverlayStateMachine>  _logger;
 
@@ -44,12 +48,14 @@ public sealed class OverlayStateMachine
 
     public OverlayStateMachine(
         ISignalStore                   store,
+        ISimilarityEngine              similarity,
         SignalBus                      bus,
         ILogger<OverlayStateMachine>   logger)
     {
-        _store  = store;
-        _bus    = bus;
-        _logger = logger;
+        _store      = store;
+        _similarity = similarity;
+        _bus        = bus;
+        _logger     = logger;
 
         _onSignalDetected = OnSignalDetected;
         _onCandleClosed   = OnCandleClosed;
@@ -156,6 +162,12 @@ public sealed class OverlayStateMachine
 
         var outcomeTime = isTerminal ? DateTimeOffset.UtcNow : (DateTimeOffset?)null;
         _ = _store.UpdateStateAsync(id, newState, outcomeTime);
+
+        // Record binary outcome for future kNN training
+        if (newState is OverlayState.TargetHit)
+            _ = _similarity.RecordOutcomeAsync(id, 1);
+        else if (newState is OverlayState.StopHit)
+            _ = _similarity.RecordOutcomeAsync(id, 0);
 
         _bus.Publish(new OverlayStateChangedEvent(id, signal.Symbol, oldState, newState));
 

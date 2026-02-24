@@ -67,6 +67,7 @@ public partial class App : Application
         services.AddSingleton<ICandleWriter>(sp   => (ICandleWriter)sp.GetRequiredService<ICandleRepository>());
         services.AddSingleton<IWatchlistReader>(sp => (IWatchlistReader)sp.GetRequiredService<IWatchlistRepository>());
         services.AddSingleton<ISignalStore>(sp    => (ISignalStore)sp.GetRequiredService<ISignalRepository>());
+        services.AddSingleton<IFeatureVectorStore>(sp => (IFeatureVectorStore)sp.GetRequiredService<IFeatureVectorRepository>());
 
         // ── Market data feed
         services.AddSingleton<CandleCache>();
@@ -91,12 +92,15 @@ public partial class App : Application
         services.AddSingleton<SignalBus>(_ =>
             new SignalBus(SynchronizationContext.Current));
 
-        // ── Signal engine (Sprints 6 + 7)
+        // ── Signal engine (Sprints 6 + 7 + 8)
         // IEnumerable<ISignalDetector> is auto-resolved by DI from all registered ISignalDetector singletons
         services.AddSingleton<ISignalDetector, TrendContinuationDetector>();
         services.AddSingleton<ISignalDetector, BreakoutRetestDetector>();
         services.AddSingleton<ISignalDetector, MeanReversionDetector>();
         services.AddSingleton<ISignalDetector, SupportResistanceBounceDetector>();
+        // Sprint 8 — Similarity engine
+        services.AddSingleton<FeatureVectorBuilder>();
+        services.AddSingleton<ISimilarityEngine, SimilarityEngine>();
         services.AddSingleton<SignalAggregator>();
         services.AddSingleton<OverlayStateMachine>();
     }

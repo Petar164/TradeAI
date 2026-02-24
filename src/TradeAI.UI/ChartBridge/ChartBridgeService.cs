@@ -122,6 +122,7 @@ public sealed class ChartBridgeService
             targetHigh       = signal.TargetHigh,
             direction        = signal.Direction.ToString(),
             confidencePct    = signal.ConfidencePct,
+            sampleCount      = signal.SimilaritySampleCount,
         };
         var json = JsonSerializer.Serialize(data);
         await _webView.ExecuteScriptAsync($"window.bridge.drawSignal({json})");

@@ -193,7 +193,7 @@
         const arrowColor = typeColors[signal.signalType] ?? (isLong ? '#2962FF' : '#FF6D00');
         const typeLabel  = typeLabels[signal.signalType] ?? signal.signalType;
         const labelText  = signal.confidencePct != null
-          ? Math.round(signal.confidencePct) + '%'
+          ? Math.round(signal.confidencePct) + '% (' + (signal.sampleCount ?? '?') + '/10)'
           : typeLabel;
 
         const marker = {
