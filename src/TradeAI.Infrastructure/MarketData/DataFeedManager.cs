@@ -45,6 +45,7 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
     private volatile string _activeTimeframe;
     private DateTimeOffset? _lastActiveOpenTime;
     private volatile bool   _reloadRequested;
+    private CancellationTokenSource? _pollDelayCts;  // cancelled to skip the 5 s wait
 
     // ── Constructor ───────────────────────────────────────────────────────────
     public DataFeedManager(
@@ -111,6 +112,10 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
         _settings.ActiveSymbol    = symbol;
         _settings.ActiveTimeframe = timeframe;
         _reloadRequested = true;
+
+        // Cancel any running poll delay so the reload happens immediately
+        _pollDelayCts?.Cancel();
+
         _bus.Publish(new ActiveSymbolChangedEvent(symbol, timeframe));
         _logger.LogInformation("Active symbol changed → {Symbol} {Timeframe}", symbol, timeframe);
     }
@@ -123,7 +128,11 @@ public sealed class DataFeedManager : IHostedService, ILiveCandleFeed, IDisposab
         {
             try
             {
-                await Task.Delay(_settings.IntraCandlePollMs, ct);
+                // Use a short-lived CTS so SetActiveSymbol can cancel the delay early
+                _pollDelayCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                try   { await Task.Delay(_settings.IntraCandlePollMs, _pollDelayCts.Token); }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested) { /* reload early */ }
+                finally { _pollDelayCts.Dispose(); _pollDelayCts = null; }
 
                 if (_reloadRequested)
                 {

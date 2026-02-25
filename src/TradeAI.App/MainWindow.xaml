@@ -426,42 +426,62 @@
                           ResizeBehavior="PreviousAndNext"
                           Cursor="SizeWE"/>
 
-            <!-- ─── RIGHT: Signal Panel ─── -->
+            <!-- ─── RIGHT: Signal Panel + AI Chat ─── -->
             <Border Grid.Column="4"
                     Background="{StaticResource BrushSurface}"
                     BorderBrush="{StaticResource BrushBorder}"
                     BorderThickness="1,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>  <!-- Tab header -->
+                        <RowDefinition Height="*"/>     <!-- Tab content -->
+                        <RowDefinition Height="Auto"/>  <!-- Input bar -->
                     </Grid.RowDefinitions>
 
-                    <!-- Panel header -->
+                    <!-- ── Tab header ────────────────────────────────────── -->
                     <Border Grid.Row="0"
                             BorderBrush="{StaticResource BrushBorderSubtle}"
-                            BorderThickness="0,0,0,1"
-                            Padding="16,0">
-                        <Grid Height="38">
-                            <TextBlock Text="SIGNALS"
-                                       Style="{StaticResource PanelHeaderStyle}"
-                                       Margin="0"
-                                       VerticalAlignment="Center"/>
-                            <Border HorizontalAlignment="Right"
+                            BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal" Height="38">
+                            <Button x:Name="TabSignalsBtn"
+                                    Content="SIGNALS"
+                                    Click="TabSignals_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                                    Style="{StaticResource TabButtonActiveStyle}"
+                                    Padding="14,0"/>
+                            <Button x:Name="TabAiBtn"
+                                    Content="AI CHAT"
+                                    Click="TabAi_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                                    Style="{StaticResource TabButtonStyle}"
+                                    Padding="14,0"/>
+                            <!-- Signal count badge -->
+                            <Border x:Name="SignalCountBadge"
                                     VerticalAlignment="Center"
                                     Background="{StaticResource BrushAccentDim}"
                                     CornerRadius="8"
-                                    Padding="7,2">
-                                <TextBlock Text="0"
+                                    Padding="7,2"
+                                    Margin="4,0,0,0">
+                                <TextBlock x:Name="SignalCountLabel"
+                                           Text="0"
                                            FontSize="10" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushAccent}"/>
                             </Border>
-                        </Grid>
+                            <!-- AI status dot -->
+                            <Border x:Name="AiStatusDot"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0"
+                                    Visibility="Collapsed">
+                                <Ellipse x:Name="AiStatusEllipse"
+                                         Width="7" Height="7"
+                                         Fill="#64748B"/>
+                            </Border>
+                        </StackPanel>
                     </Border>
 
-                    <!-- Signal cards / empty state -->
-                    <ScrollViewer Grid.Row="1"
+                    <!-- ── SIGNALS tab content ────────────────────────────── -->
+                    <ScrollViewer x:Name="SignalScrollViewer"
+                                  Grid.Row="1"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="SignalCards">
@@ -469,7 +489,6 @@
                             <StackPanel HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Margin="24,48,24,0">
-                                <!-- Radar graphic -->
                                 <Grid Width="64" Height="64"
                                       HorizontalAlignment="Center"
                                       Margin="0,0,0,16">
@@ -497,7 +516,6 @@
                                              VerticalAlignment="Center"
                                              Opacity="0.8"/>
                                 </Grid>
-
                                 <TextBlock Text="Scanning for setups"
                                            FontSize="13" FontWeight="Medium"
                                            Foreground="{StaticResource BrushTextMuted}"
@@ -513,83 +531,82 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Chat override bar -->
+                    <!-- ── AI CHAT tab content ────────────────────────────── -->
+                    <ScrollViewer x:Name="ChatScrollViewer"
+                                  Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="Collapsed">
+                        <StackPanel x:Name="ChatHistoryPanel"
+                                    Margin="10,10,10,4"/>
+                    </ScrollViewer>
+
+                    <!-- ── Bottom input bar ───────────────────────────────── -->
                     <Border Grid.Row="2"
                             BorderBrush="{StaticResource BrushBorder}"
                             BorderThickness="0,1,0,0"
                             Padding="10,8">
-                        <StackPanel>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                                <!-- TextBox with placeholder overlay -->
-                                <Grid Grid.Column="0">
-                                    <TextBox x:Name="ChatInput"
-                                             Height="32"
-                                             VerticalContentAlignment="Center"
-                                             KeyDown="ChatInput_KeyDown"
-                                             shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-                                    <TextBlock Text="e.g. too risky, widen stops..."
-                                               IsHitTestVisible="False"
-                                               FontSize="11"
-                                               Foreground="{StaticResource BrushTextSubtle}"
-                                               VerticalAlignment="Center"
-                                               Padding="11,0,0,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Text, ElementName=ChatInput}" Value="">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Grid>
-
-                                <Button Grid.Column="1"
-                                        x:Name="ChatSendButton"
-                                        Width="32" Height="32"
-                                        Margin="6,0,0,0"
-                                        Background="{StaticResource BrushAccent}"
-                                        Foreground="White"
-                                        BorderThickness="0"
-                                        FontSize="14"
-                                        Cursor="Hand"
-                                        Content="&#x2192;"
-                                        Click="ChatSendButton_Click"
-                                        shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="Bd"
-                                                    Background="{TemplateBinding Background}"
-                                                    CornerRadius="4">
-                                                <ContentPresenter HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background"
-                                                            Value="{StaticResource BrushAccentHover}"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
+                            <Grid Grid.Column="0">
+                                <TextBox x:Name="ChatInput"
+                                         Height="32"
+                                         VerticalContentAlignment="Center"
+                                         KeyDown="ChatInput_KeyDown"
+                                         shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                                <TextBlock x:Name="ChatPlaceholder"
+                                           IsHitTestVisible="False"
+                                           FontSize="11"
+                                           Foreground="{StaticResource BrushTextSubtle}"
+                                           VerticalAlignment="Center"
+                                           Padding="11,0,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Text, ElementName=ChatInput}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Grid>
 
-                            <!-- Confirmation / error response from RiskProfileService -->
-                            <TextBlock x:Name="ChatResponseLabel"
-                                       FontSize="10"
-                                       Foreground="{StaticResource BrushAccent}"
-                                       Margin="2,5,2,0"
-                                       TextWrapping="Wrap"
-                                       Visibility="Collapsed"/>
-                        </StackPanel>
+                            <Button Grid.Column="1"
+                                    x:Name="ChatSendButton"
+                                    Width="32" Height="32"
+                                    Margin="6,0,0,0"
+                                    Background="{StaticResource BrushAccent}"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    FontSize="14"
+                                    Cursor="Hand"
+                                    Content="&#x2192;"
+                                    Click="ChatSendButton_Click"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd"
+                                                Background="{TemplateBinding Background}"
+                                                CornerRadius="4">
+                                            <ContentPresenter HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background"
+                                                        Value="{StaticResource BrushAccentHover}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
                     </Border>
                 </Grid>
             </Border>

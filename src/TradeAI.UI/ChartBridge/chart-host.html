@@ -8,6 +8,21 @@
     /* position:relative so overlay divs are positioned relative to this container */
     #chart { position: relative; width: 100%; height: 100%; }
 
+    /* ── OHLCV legend (top-left) ─────────────────────────────────────────── */
+    #ohlcv {
+      position: absolute;
+      top: 8px; left: 8px;
+      pointer-events: none;
+      z-index: 10;
+      font: 11px 'Segoe UI', system-ui, sans-serif;
+      color: #8B8FA8;
+      line-height: 1.7;
+      background: rgba(11,14,23,0.70);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    #ohlcv span { color: #D1D4DC; font-weight: 600; margin-left: 3px; }
+
     /* ── Overlay base styles ──────────────────────────────────────────────── */
     .ov-zone {
       position: absolute;
@@ -42,7 +57,9 @@
   </style>
 </head>
 <body>
-  <div id="chart"></div>
+  <div id="chart">
+    <div id="ohlcv">Waiting for data…</div>
+  </div>
   <!-- __LIGHTWEIGHT_CHARTS_SCRIPT__ -->
   <script>
     // ── Chart setup ──────────────────────────────────────────────────────────
@@ -69,7 +86,11 @@
         secondsVisible: false,
         rightOffset:    8,
       },
-      rightPriceScale: { borderColor: '#232838' },
+      rightPriceScale: {
+        borderColor: '#232838',
+        visible: true,
+        scaleMargins: { top: 0.08, bottom: 0.08 },
+      },
       watermark:   { visible: false },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale:  { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -131,7 +152,35 @@
     function repositionAll() { for (const id in overlays) repositionOne(id); }
 
     chart.timeScale().subscribeVisibleTimeRangeChange(repositionAll);
-    chart.subscribeCrosshairMove(repositionAll);
+
+    // ── OHLCV legend update ──────────────────────────────────────────────────
+    const ohlcvEl = document.getElementById('ohlcv');
+    function fmt(v) { return v == null ? '—' : v.toFixed(4).replace(/\.?0+$/, '') || v.toFixed(2); }
+    function updateOhlcv(bar) {
+      if (!bar) { ohlcvEl.textContent = ''; return; }
+      const d = bar.time ? new Date(bar.time * 1000) : null;
+      const ts = d ? d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+      const chg = bar.open ? ((bar.close - bar.open) / bar.open * 100).toFixed(2) : '';
+      const color = bar.close >= bar.open ? '#00C176' : '#FF3B3B';
+      ohlcvEl.innerHTML =
+        (ts ? `<span style="color:#6B7280">${ts}</span>  ` : '') +
+        `O<span>${fmt(bar.open)}</span>  ` +
+        `H<span>${fmt(bar.high)}</span>  ` +
+        `L<span>${fmt(bar.low)}</span>  ` +
+        `C<span style="color:${color}">${fmt(bar.close)}</span>` +
+        (chg ? `  <span style="color:${color}">${chg}%</span>` : '');
+    }
+
+    let lastBar = null;
+    chart.subscribeCrosshairMove(param => {
+      repositionAll();
+      if (param.time) {
+        const bar = param.seriesData.get(series);
+        updateOhlcv(bar ?? lastBar);
+      } else {
+        updateOhlcv(lastBar);
+      }
+    });
 
     function removeOverlay(id) {
       const ov = overlays[id]; if (!ov) return;
@@ -150,11 +199,15 @@
         chart.timeScale().fitContent();
         for (const id in overlays) removeOverlay(id);
         allMarkers = [];
+        lastBar = data.length > 0 ? data[data.length - 1] : null;
+        updateOhlcv(lastBar);
       },
 
       /** Update or append the latest (partial) candle. */
       updateLastCandle(bar) {
         series.update(bar);
+        lastBar = bar;
+        updateOhlcv(bar);
         repositionAll();
       },
 

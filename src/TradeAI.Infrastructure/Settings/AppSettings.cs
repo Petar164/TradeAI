@@ -36,4 +36,8 @@ public class AppSettings : IActiveSymbolProvider
 
     // Candle cache depth per symbol/timeframe
     public int CandleCacheDepth { get; set; } = 500;
+
+    // Ollama AI assistant
+    public string OllamaBaseUrl { get; set; } = "http://localhost:11434";
+    public string OllamaModel   { get; set; } = "llama3.2";
 }

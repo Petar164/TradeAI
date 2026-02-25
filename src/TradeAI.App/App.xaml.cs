@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -6,6 +7,7 @@ using TradeAI.Core.Messaging;
 using TradeAI.Core.Models;
 using TradeAI.Data.Database;
 using TradeAI.Data.Database.Repositories;
+using TradeAI.Infrastructure.AI;
 using TradeAI.Infrastructure.MarketData;
 using TradeAI.Infrastructure.RiskManagement;
 using TradeAI.Infrastructure.Settings;
@@ -112,7 +114,7 @@ public partial class App : Application
         services.AddSingleton<ChartBridgeService>();
         services.AddSingleton<ChartViewModel>();
 
-        // ── UI
+        // ── UI (Transient so each resolve creates a fresh window instance)
         services.AddTransient<MainWindow>();
 
         // ── SignalBus (Sprint 5) — capture WPF SynchronizationContext after UI thread is ready
@@ -133,6 +135,11 @@ public partial class App : Application
 
         // Sprint 9 — Risk profile system
         services.AddSingleton<IRiskProfileService, RiskProfileService>();
+
+        // Sprint 10.5 — Ollama AI assistant
+        services.AddSingleton<OllamaClient>(_ =>
+            new OllamaClient(new HttpClient()));
+        services.AddSingleton<IAIAssistant, TradeAIAssistant>();
     }
 
     // ── Startup bootstrap ────────────────────────────────────────────────────
