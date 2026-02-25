@@ -27,8 +27,11 @@ public partial class App : Application
             .ConfigureServices(RegisterServices)
             .Build();
 
-        await _host.StartAsync();
+        // Initialize the database BEFORE starting hosted services so that
+        // DataFeedManager.StartAsync (which writes candles immediately) finds
+        // existing tables instead of throwing a "no such table" exception.
         await BootstrapDatabaseAsync();
+        await _host.StartAsync();
 
         // Sprint 9 — Risk profile service loads from DB (falls back to Default if none set)
         var riskService = _host.Services.GetRequiredService<IRiskProfileService>();
