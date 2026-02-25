@@ -37,6 +37,17 @@ public partial class App : Application
         var riskService = _host.Services.GetRequiredService<IRiskProfileService>();
         await riskService.LoadAsync();
 
+        // Eagerly resolve singletons that subscribe to SignalBus in their constructors
+        _host.Services.GetRequiredService<SignalAggregator>();
+        _host.Services.GetRequiredService<OverlayStateMachine>();
+
+        // Create MainWindow and register it as Application.MainWindow BEFORE showing
+        // any dialog.  ShutdownMode="OnMainWindowClose" auto-assigns MainWindow to the
+        // first window opened — if that is the wizard, closing it exits the app before
+        // Show() is ever reached.  Assigning here prevents that.
+        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        Application.Current.MainWindow = mainWindow;
+
         // Show onboarding wizard on first launch
         var db = _host.Services.GetRequiredService<AppDbContext>();
         if (await db.GetSettingAsync("onboarding_complete") != "1")
@@ -49,11 +60,6 @@ public partial class App : Application
             }
         }
 
-        // Eagerly resolve singletons that subscribe to SignalBus in their constructors
-        _host.Services.GetRequiredService<SignalAggregator>();
-        _host.Services.GetRequiredService<OverlayStateMachine>();
-
-        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
 
