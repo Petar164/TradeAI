@@ -250,9 +250,11 @@
     };
 
     // ── Notify C# that the chart is ready ───────────────────────────────────
+    // Post an object (not a JSON.stringify'd string) so WebMessageAsJson on the
+    // C# side receives a proper JSON object, not a double-encoded JSON string.
     function notifyReady() {
       if (window.chrome && window.chrome.webview)
-        window.chrome.webview.postMessage(JSON.stringify({ type: 'CHART_READY' }));
+        window.chrome.webview.postMessage({ type: 'CHART_READY' });
     }
     setTimeout(notifyReady, 100);
   </script>
