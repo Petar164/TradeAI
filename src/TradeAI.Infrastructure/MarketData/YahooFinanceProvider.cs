@@ -98,16 +98,25 @@ public sealed class YahooFinanceProvider : IMarketDataProvider
         {
             if (_crumb != null) return;
 
-            // Step 1: Visit Yahoo consent page to plant session cookies
+            // Step 1: Visit Yahoo Finance and the consent gate to plant session
+            // cookies. Both requests are best-effort; ignore failures.
+            try { await _http.GetAsync("https://finance.yahoo.com", ct); }
+            catch { /* cookie-seeding — ignore */ }
+            try { await _http.GetAsync("https://fc.yahoo.com", ct); }
+            catch { /* cookie-seeding — ignore */ }
+
+            // Step 2: Fetch the crumb token (try query1 first, then query2)
+            string crumb;
             try
             {
-                await _http.GetAsync("https://fc.yahoo.com", ct);
+                crumb = await _http.GetStringAsync(
+                    "https://query1.finance.yahoo.com/v1/test/getcrumb", ct);
             }
-            catch { /* cookie-seeding — ignore failures */ }
-
-            // Step 2: Fetch the crumb token
-            var crumb = await _http.GetStringAsync(
-                "https://query2.finance.yahoo.com/v1/test/getcrumb", ct);
+            catch
+            {
+                crumb = await _http.GetStringAsync(
+                    "https://query2.finance.yahoo.com/v1/test/getcrumb", ct);
+            }
 
             if (!string.IsNullOrWhiteSpace(crumb) && !crumb.StartsWith('{') && !crumb.StartsWith('<'))
             {
